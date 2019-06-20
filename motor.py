@@ -1,10 +1,10 @@
 import RPi.GPIO as GPIO
 import time
 
-cs   = 27    # board 13
-clk  = 18    # board 12
-mosi = 23    # board 16
-miso = 17    # board 11
+cs   = 27    # board 13 pin
+clk  = 18    # board 12 pin
+mosi = 23    # board 16 pin
+miso = 17    # board 11 pin
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(cs,   GPIO.OUT, initial=GPIO.HIGH)

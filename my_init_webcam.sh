@@ -13,7 +13,7 @@ v4l2-ctl -d /dev/video0 --set-ctrl=exposure_auto_priority=0
 
 v4l2-ctl -d /dev/video0 --set-ctrl=gain=50
 v4l2-ctl -d /dev/video0 --set-ctrl=white_balance_temperature_auto=0
-v4l2-ctl -d /dev/video0 --set-ctrl=white_balance_temperature=4200
+v4l2-ctl -d /dev/video0 --set-ctrl=white_balance_temperature=4000
 v4l2-ctl -d /dev/video0 --set-ctrl=focus_auto=0
 v4l2-ctl -d /dev/video0 --set-ctrl=focus_absolute=0
 v4l2-ctl -d /dev/video0 --set-ctrl=zoom_absolute=120
