@@ -21,7 +21,7 @@ def sample(probs):
         if r <= 0:
             return i
     return len(probs)-1
-
+  
 def c_array(ctype, values):
     arr = (ctype*len(values))()
     arr[:] = values
@@ -130,31 +130,49 @@ def classify(net, meta, im):
     res = sorted(res, key=lambda x: -x[1])
     return res
 
+import ctypes
+
+def yolo_image2npy(im_yolo):
+    npy = np.ctypeslib.as_array(im_yolo.data, shape=(800*800*3,))
+    npy = np.reshape(npy, (3,800,800))
+    npy = np.transpose(npy, (1,2,0))
+    return npy
+
 def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     t0=time.time()
-    im = load_image(image, 0, 0)
-    #print "yolo IMAGE type ", type(im), dir(im), im.h, im.w, im.c
+    #p0 = glob.glob(base_dir + 'testimg/yellow/*.jpg')[0]
     
+    #im5 = load_image(p0, 0, 0)
+    #npy5 = np.ctypeslib.as_array(im5.data, shape=(800*800,))
+    #npy5 = np.reshape(npy5, (800,800))
+    #cv2.imshow('yolo ', npy5)
+    #cv2.waitKey(0)
+    #quit()
+
+    im = IMAGE()
+    im.w = 800
+    im.h = 800
+    im.c = 3
     
-    npy = np.ctypeslib.as_array(im.data, shape=(800*800*3,))
+    xxx = np.transpose(image, (2,0,1))
+    xxx = xxx.flatten()
+    im.data = xxx.ctypes.data_as(POINTER(c_float))
     
-    npy_c0 = np.reshape(npy[0*(800*800):1*(800*800)], (800,800))
-    npy_c1 = np.reshape(npy[1*(800*800):2*(800*800)], (800,800))
-    npy_c2 = np.reshape(npy[2*(800*800):3*(800*800)], (800,800))
+    #npy7 = yolo_image2npy(im)
     
-    npy3d = np.zeros((800,800,3),dtype=np.float32)    
-    npy3d[:,:,0] = npy_c2.copy()
-    npy3d[:,:,1] = npy_c1.copy()
-    npy3d[:,:,2] = npy_c0.copy()
-    
-    cv2.imshow("",npy3d)
-    cv2.waitKey(0)
-    quit()
-    print '   load...', int(1000.0*(time.time()-t0)), 'ms'
+    #cv2.imshow("npy7", npy7)
+    #cv2.waitKey(0)
+    #quit()
+
+
+    print '  load...', int(1000.0*(time.time()-t0)), 'ms'
     num = c_int(0)
     pnum = pointer(num)
     predict_image(net, im)
-    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 0, pnum)
+    
+    print "-----"
+    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 
+                0, pnum)
     num = pnum[0]
     if (nms): do_nms_obj(dets, num, meta.classes, nms);
 
@@ -165,36 +183,45 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
                 b = dets[j].bbox
                 res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
     res = sorted(res, key=lambda x: -x[1])
-    free_image(im)
+    #free_image(im)  // should not grabage collect in here
     free_detections(dets, num)
-    print int(1000.0*(time.time()-t0)), 'ms'
+    print "detect ", int(1000.0*(time.time()-t0)), 'ms'
     return res
     
 if __name__ == "__main__":
 
+    cam = my_cam.cam_init()
+    exceed = (1280-720)/2
+
     base_dir = '/home/nvidia/my_yolo/'
     net = None
-    #net = load_net(base_dir + "my_yolov3-tiny.cfg", 
-    #               base_dir + "weights/my_yolov3-tiny_10000.weights", 0)
+    net = load_net(base_dir + "my_yolov3-tiny.cfg", 
+                   base_dir + "weights/my_yolov3-tiny_10000.weights", 0)
     meta = load_meta(base_dir + "darknet.data")
+
+    img = cv2.imread(glob.glob(base_dir + 'testimg/yellow/*.jpg')[0])
+    img = img.astype(np.float32)/256.0
+
+
+    #ret, im = cam.read()
+    #im = im[:, 0+exceed:720+exceed]        
+    #im = cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
+    r = detect(net, meta, img)
+    pprint.pprint(r)
+    quit()
     
-    for m in range(10):
-      for fn in glob.glob(base_dir + 'testimg/yellow/*.jpg'):
-        r = detect(net, meta, fn)
-        pprint.pprint(r)
+    #for m in range(10):
+    #  for fn in glob.glob(base_dir + 'testimg/yellow/*.jpg'):
+    #    r = detect(net, meta, fn)
+    #    pprint.pprint(r)
         
 
 
-    cam = my_cam.cam_init()
-    exceed = (1280-720)/2
     
     for n in range(500):
         ret, im = cam.read()
-        im = im[:, 0+exceed:720+exceed]
-        print n, im.shape    
-        
-        im = cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
-        
+        im = im[:, 0+exceed:720+exceed]        
+        im = cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)        
         cv2.imshow("", im)
         cv2.waitKey(50)
     quit()
