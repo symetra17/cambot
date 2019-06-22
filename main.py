@@ -143,12 +143,15 @@ def yolo_image2npy(im_yo):
     npy = np.transpose(npy, (1,2,0))
     return npy
 
-def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
+def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
+
     t0=time.time()
     
     xxx = np.transpose(image, (2,0,1))
     xxx = xxx.flatten()
-    im_yolo.data =  xxx.ctypes.data_as(POINTER(c_float))
+    numpy_ptr =  xxx.ctypes.data_as(POINTER(c_float))
+    
+    im_yolo.data=numpy_ptr
     
     #memmove(im_yolo.data, numpy_ptr, 800*800*3*4)
     
@@ -170,26 +173,32 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
                 res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
     res = sorted(res, key=lambda x: -x[1])
     #free_image(im_yolo)
+    
+    #im_yolo.data = POINTER(c_float)()
+    
     free_detections(dets, num)
     print "detect ", int(1000.0*(time.time()-t0)), 'ms'
+    
+    binary_output = False
     
     if len(res) > 0:
         label = res[0][0]
         confi = res[0][1]
-        print 'confident ', confi
+        print label, '  confi %.2f'%confi
         loc   = res[0][2]
         x = int(loc[0])
         y = int(loc[1])
         w = int(loc[2])
         h = int(loc[3])
         if label == 'bottle':
+            binary_output = True
             cv2.rectangle(image, 
                     (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), 
                     color=(1, 0.1, 1))
             cv2.imshow("", image)
-            cv2.waitKey(20)
+            cv2.waitKey(10)
 
-    return res
+    return binary_output
     
 if __name__ == "__main__":
 
@@ -213,6 +222,9 @@ if __name__ == "__main__":
         img = img.astype(np.float32)/256.0
         r = detect(net, meta, img)
         #pprint.pprint(r)
+        #for m in range(10):
+        #   cam.read()
+        time.sleep(5)
     quit()
     
     
