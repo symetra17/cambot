@@ -12,6 +12,8 @@ import pprint
 import time
 import glob
 
+base_dir = '/home/nvidia/my_yolo/'
+
 def sample(probs):
     s = sum(probs)
     probs = [a/s for a in probs]
@@ -122,6 +124,9 @@ predict_image = lib.network_predict_image
 predict_image.argtypes = [c_void_p, IMAGE]
 predict_image.restype = POINTER(c_float)
 
+p0 = glob.glob(base_dir + 'testimg/yellow/*.jpg')[0]
+im_yolo = load_image(p0, 0, 0)
+
 def classify(net, meta, im):
     out = predict_image(net, im)
     res = []
@@ -132,50 +137,31 @@ def classify(net, meta, im):
 
 import ctypes
 
-def yolo_image2npy(im_yolo):
-    npy = np.ctypeslib.as_array(im_yolo.data, shape=(800*800*3,))
+def yolo_image2npy(im_yo):
+    npy = np.ctypeslib.as_array(im_yo, shape=(800*800*3,))
     npy = np.reshape(npy, (3,800,800))
     npy = np.transpose(npy, (1,2,0))
     return npy
 
 def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
     t0=time.time()
-    #p0 = glob.glob(base_dir + 'testimg/yellow/*.jpg')[0]
-    
-    #im5 = load_image(p0, 0, 0)
-    #npy5 = np.ctypeslib.as_array(im5.data, shape=(800*800,))
-    #npy5 = np.reshape(npy5, (800,800))
-    #cv2.imshow('yolo ', npy5)
-    #cv2.waitKey(0)
-    #quit()
-
-    im = IMAGE()
-    im.w = 800
-    im.h = 800
-    im.c = 3
     
     xxx = np.transpose(image, (2,0,1))
     xxx = xxx.flatten()
-    im.data = xxx.ctypes.data_as(POINTER(c_float))
+    im_yolo.data =  xxx.ctypes.data_as(POINTER(c_float))
     
-    #npy7 = yolo_image2npy(im)
+    #memmove(im_yolo.data, numpy_ptr, 800*800*3*4)
     
-    #cv2.imshow("npy7", npy7)
-    #cv2.waitKey(0)
-    #quit()
-
-
-    print '  load...', int(1000.0*(time.time()-t0)), 'ms'
+    print ' load...', int(1000.0*(time.time()-t0)), 'ms'
     num = c_int(0)
     pnum = pointer(num)
-    predict_image(net, im)
-    
-    print "-----"
-    dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, None, 
-                0, pnum)
+    predict_image(net, im_yolo)
+
+    dets = get_network_boxes(net, im_yolo.w, im_yolo.h, thresh, 
+            hier_thresh, None, 0, pnum)
     num = pnum[0]
     if (nms): do_nms_obj(dets, num, meta.classes, nms);
-
+    
     res = []
     for j in range(num):
         for i in range(meta.classes):
@@ -183,9 +169,26 @@ def detect(net, meta, image, thresh=.5, hier_thresh=.5, nms=.45):
                 b = dets[j].bbox
                 res.append((meta.names[i], dets[j].prob[i], (b.x, b.y, b.w, b.h)))
     res = sorted(res, key=lambda x: -x[1])
-    #free_image(im)  // should not grabage collect in here
+    #free_image(im_yolo)
     free_detections(dets, num)
     print "detect ", int(1000.0*(time.time()-t0)), 'ms'
+    
+    if len(res) > 0:
+        label = res[0][0]
+        confi = res[0][1]
+        print 'confident ', confi
+        loc   = res[0][2]
+        x = int(loc[0])
+        y = int(loc[1])
+        w = int(loc[2])
+        h = int(loc[3])
+        if label == 'bottle':
+            cv2.rectangle(image, 
+                    (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), 
+                    color=(1, 0.1, 1))
+            cv2.imshow("", image)
+            cv2.waitKey(20)
+
     return res
     
 if __name__ == "__main__":
@@ -193,30 +196,25 @@ if __name__ == "__main__":
     cam = my_cam.cam_init()
     exceed = (1280-720)/2
 
-    base_dir = '/home/nvidia/my_yolo/'
+    
     net = None
     net = load_net(base_dir + "my_yolov3-tiny.cfg", 
                    base_dir + "weights/my_yolov3-tiny_10000.weights", 0)
     meta = load_meta(base_dir + "darknet.data")
 
-    img = cv2.imread(glob.glob(base_dir + 'testimg/yellow/*.jpg')[0])
-    img = img.astype(np.float32)/256.0
+    #im = cv2.imread(glob.glob(base_dir + 'testimg/yellow/*.jpg')[0])
+    #im = im.astype(np.float32)/256.0
 
-
-    #ret, im = cam.read()
-    #im = im[:, 0+exceed:720+exceed]        
-    #im = cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
-    r = detect(net, meta, img)
-    pprint.pprint(r)
+    for n in range(1000):
+        ret, img = cam.read()
+        img = img[:, 0+exceed:720+exceed]        
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        img = cv2.resize(img, (800,800))
+        img = img.astype(np.float32)/256.0
+        r = detect(net, meta, img)
+        #pprint.pprint(r)
     quit()
     
-    #for m in range(10):
-    #  for fn in glob.glob(base_dir + 'testimg/yellow/*.jpg'):
-    #    r = detect(net, meta, fn)
-    #    pprint.pprint(r)
-        
-
-
     
     for n in range(500):
         ret, im = cam.read()
