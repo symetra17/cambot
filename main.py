@@ -14,15 +14,6 @@ import glob
 
 base_dir = '/home/nvidia/my_yolo/'
 
-def sample(probs):
-    s = sum(probs)
-    probs = [a/s for a in probs]
-    r = random.uniform(0, 1)
-    for i in range(len(probs)):
-        r = r - probs[i]
-        if r <= 0:
-            return i
-    return len(probs)-1
   
 def c_array(ctype, values):
     arr = (ctype*len(values))()
@@ -195,8 +186,8 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
             cv2.rectangle(image, 
                     (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), 
                     color=(1, 0.1, 1))
-            cv2.imshow("", image)
-            cv2.waitKey(10)
+
+    cv2.imshow("", image)
 
     return binary_output
     
@@ -205,6 +196,7 @@ if __name__ == "__main__":
     cam = my_cam.cam_init()
     exceed = (1280-720)/2
 
+    motor.forward(20)
     
     net = None
     net = load_net(base_dir + "my_yolov3-tiny.cfg", 
@@ -215,16 +207,26 @@ if __name__ == "__main__":
     #im = im.astype(np.float32)/256.0
 
     for n in range(1000):
+        for h in range(6):
+            ret, img = cam.read()
         ret, img = cam.read()
         img = img[:, 0+exceed:720+exceed]        
         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
         img = cv2.resize(img, (800,800))
         img = img.astype(np.float32)/256.0
         r = detect(net, meta, img)
-        #pprint.pprint(r)
-        #for m in range(10):
-        #   cam.read()
-        time.sleep(5)
+        if r:
+            motor.turn(45)
+            motor.forward(600)
+            motor.turn(-45)
+        else:
+            print "motor forward"
+            motor.forward(300)
+        
+        time.sleep(1)
+        key = cv2.waitKey(0)
+        if key&0xff==ord('q'):
+            quit()
     quit()
     
     

@@ -168,7 +168,7 @@ def forward(inp):
     wait_finish()
 
 def turn(inp):
-
+    inp = int(inp * 2.5)
     a = inp
     if a >=0:
         sign_b_0 = 0
