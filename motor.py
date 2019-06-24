@@ -230,7 +230,7 @@ def wait_finish():
 #hard_hi_z()   # turn off bridge
 
 
-time.sleep(0.5)
+
 
 #xfer2(0x80 + 0x10 + 0x02 + 1,  0x80 + 0x10 + 0x02 + 1)  #very slow move(sure work)
 

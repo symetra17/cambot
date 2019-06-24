@@ -144,9 +144,7 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     
     im_yolo.data=numpy_ptr
     
-    #memmove(im_yolo.data, numpy_ptr, 800*800*3*4)
-    
-    print ' load...', int(1000.0*(time.time()-t0)), 'ms'
+    #print ' load...', int(1000.0*(time.time()-t0)), 'ms'
     num = c_int(0)
     pnum = pointer(num)
     predict_image(net, im_yolo)
@@ -171,7 +169,10 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     print "detect ", int(1000.0*(time.time()-t0)), 'ms'
     
     binary_output = False
-    y_nearest = 1000
+    x = 0
+    y_nearest = 0
+    
+    print "number of item: ", len(res)
     
     if len(res) > 0:
         label = res[0][0]
@@ -195,6 +196,10 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     
 if __name__ == "__main__":
 
+
+    motor.reset_device()
+
+
     cam = my_cam.cam_init()
     exceed = (1280-720)/2
 
@@ -216,24 +221,42 @@ if __name__ == "__main__":
         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
         img = cv2.resize(img, (800,800))
         img = img.astype(np.float32)/256.0
-        r = detect(net, meta, img)
-        if r and y > 100:
-            if x<400:
+        r, x, y = detect(net, meta, img)
+        print 'x ', x, '   y ', y
+        
+        
+        key = cv2.waitKey(0)
+        if key&0xff==ord('q'):
+            quit()
+
+        if r and y > 500:
+            if 300 < x < 500:
+                print 'middle-cw'
+                motor.turn(45)
+                motor.forward(400)
+                motor.turn(-45)
+                motor.forward(200)
+            elif x < 400:
                 print 'cw'
-                motor.turn(45)
-                motor.forward(600)
-                motor.turn(-45)
-            else:
-                print 'counter cw'
-                motor.turn(-45)
-                motor.forward(600)
-                motor.turn(45)
-            
+                motor.turn(40)
+                motor.forward(200)
+                motor.turn(-40)
+                motor.forward(300)
+            else:    # >500
+                print 'ccw'
+                motor.turn(-40)
+                motor.forward(200)
+                motor.turn(40)
+                motor.forward(300)
+        elif r and y > 200:
+            print "small forward"
+            motor.forward(200)
         else:
-            print "motor forward"
+            print "forward"
             motor.forward(300)
         
         time.sleep(1)
+        
         key = cv2.waitKey(0)
         if key&0xff==ord('q'):
             quit()
