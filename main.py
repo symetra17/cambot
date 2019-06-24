@@ -171,6 +171,7 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     print "detect ", int(1000.0*(time.time()-t0)), 'ms'
     
     binary_output = False
+    y_nearest = 1000
     
     if len(res) > 0:
         label = res[0][0]
@@ -182,6 +183,7 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
         w = int(loc[2])
         h = int(loc[3])
         if label == 'bottle':
+            y_nearest = y + int(h/2)
             binary_output = True
             cv2.rectangle(image, 
                     (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), 
@@ -189,7 +191,7 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
 
     cv2.imshow("", image)
 
-    return binary_output
+    return binary_output, x, y_nearest
     
 if __name__ == "__main__":
 
@@ -215,10 +217,18 @@ if __name__ == "__main__":
         img = cv2.resize(img, (800,800))
         img = img.astype(np.float32)/256.0
         r = detect(net, meta, img)
-        if r:
-            motor.turn(45)
-            motor.forward(600)
-            motor.turn(-45)
+        if r and y > 100:
+            if x<400:
+                print 'cw'
+                motor.turn(45)
+                motor.forward(600)
+                motor.turn(-45)
+            else:
+                print 'counter cw'
+                motor.turn(-45)
+                motor.forward(600)
+                motor.turn(45)
+            
         else:
             print "motor forward"
             motor.forward(300)
