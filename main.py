@@ -225,10 +225,12 @@ if __name__ == "__main__":
         print 'x ', x, '   y ', y
         
         
-        key = cv2.waitKey(0)
+        key = cv2.waitKey(100)
         if key&0xff==ord('q'):
             quit()
-
+            
+        # y is 220 for 400mm from robot tip
+        
         if r and y > 500:
             if 300 < x < 500:
                 print 'middle-cw'
@@ -260,6 +262,7 @@ if __name__ == "__main__":
         key = cv2.waitKey(0)
         if key&0xff==ord('q'):
             quit()
+            
     quit()
     
     
