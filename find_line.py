@@ -10,6 +10,8 @@ import time
 line_thickness = 25
 angle_max = 100
 template = np.zeros((angle_max, 100,100), dtype=np.float32)
+mask = np.zeros((100,100), dtype=np.float32)
+mask = cv2.circle(mask, (50, 50), 50, (1), cv2.FILLED)
 
 def generate_template():
     
@@ -48,11 +50,7 @@ def the_function(source):
         angle = 0
         result = np.zeros((angle_max))
         for angle in range(angle_max):
-            focus = img[m:m+100, 300:400]
-            
-            mask = np.zeros((100,100), dtype=np.float32)
-            mask = cv2.circle(mask, (50, 50), 50, (1), cv2.FILLED)
-            
+            focus = img[m:m+100, 300:400]            
             val = (focus * mask * template[angle,:,:]).mean()
             result[angle] = np.sqrt(val)
        
