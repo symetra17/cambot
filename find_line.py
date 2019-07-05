@@ -50,8 +50,8 @@ def the_function(source):
         angle = 0
         result = np.zeros((angle_max))
         for angle in range(angle_max):
-            focus = img[m:m+100, 300:400]            
-            val = (focus * mask * template[angle,:,:]).mean()
+            focus = img[m:m+100, 300:400]
+            val = (focus * mask * template[angle,:,:]).sum()
             result[angle] = np.sqrt(val)
        
         min_a = np.argmin(result)
@@ -60,10 +60,9 @@ def the_function(source):
             peak_diff = diff
             peak_rot = min_a
             peak_pos = m
-        #print(m, '%3d'%min_a, 'degree', ' diff', '%.3f'%diff)
-    
-    print('peak_diff ', peak_diff)
-    if peak_diff > 0.07:    # this value have to be learn by evaluating all training image
+        
+    print('peak_diff ', peak_diff, '  estimated angle', peak_rot)
+    if peak_diff > 10.0:    # this value have to be learn by evaluating all training image
     
         tmp = np.zeros((100,100),dtype=np.float32)
         tmp = cv2.line(tmp, (0, 0), (100,100), 1, thickness=23)
@@ -78,7 +77,7 @@ def the_function(source):
         img_disp[peak_pos:peak_pos+100, 300:400] = img_disp[peak_pos:peak_pos+100, 300:400] + tmp
         #cv2.imshow('', img_disp)
         #cv2.waitKey(0)
-        cv2.imwrite(source[:-3]+'JPG', img_disp*128)
+        cv2.imwrite(source[:-4]+'%03d'%(peak_rot-45)+'.JPG', img_disp*128)
 
 print('generate template')
 generate_template()
@@ -89,4 +88,5 @@ t0=time.time()
 for fn in files:
     print(fn)
     the_function(fn)
+    
 print(time.time()-t0)
