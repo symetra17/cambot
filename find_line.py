@@ -5,6 +5,30 @@ import math
 import cv2
 import numpy as np
 import glob
+import time
+
+line_thickness = 25
+angle_max = 100
+template = np.zeros((angle_max, 100,100), dtype=np.float32)
+
+def generate_template():
+    
+    for angle in range(angle_max):
+        temp = np.zeros((100,100), dtype=np.float32)
+        temp = cv2.circle(temp, (50, 50), 50, (1), cv2.FILLED)
+        
+        temp2 = np.zeros((100,100),dtype=np.float32)
+        temp2 = cv2.line(temp2, (0, 0), (100,100), 1, thickness=line_thickness)
+        
+        rows, cols = temp2.shape
+        M = cv2.getRotationMatrix2D((cols/2, rows/2), angle, 1)
+        temp2 = cv2.warpAffine(temp2,M,(cols, rows))
+        
+        temp3 = np.zeros((100,100),dtype=np.float32)
+        temp3 = cv2.circle(temp3, (50, 50), 50, (1), cv2.FILLED)
+        temp2 = temp2 * temp3
+        #cv2.imshow('%d'%angle,temp2)
+        template[angle,:,:] = temp2
 
 def the_function(source):
     img = cv2.imread(source, 2)
@@ -14,7 +38,7 @@ def the_function(source):
     img_disp = img_disp.astype(np.float32)/256.0
 
     result2 = np.zeros((600))
-    line_thickness = 25
+
     peak_diff = 0
     peak_rot = -1
     peak_pos = -1
@@ -22,26 +46,14 @@ def the_function(source):
     for m in range(0, 600, 2):
 
         angle = 0
-        angle_max = 100
         result = np.zeros((angle_max))
         for angle in range(angle_max):
             focus = img[m:m+100, 300:400]
             
-            temp = np.zeros((100,100), dtype=np.float32)
-            temp = cv2.circle(temp, (50, 50), 50, (1), cv2.FILLED)
+            mask = np.zeros((100,100), dtype=np.float32)
+            mask = cv2.circle(mask, (50, 50), 50, (1), cv2.FILLED)
             
-            temp2 = np.zeros((100,100),dtype=np.float32)
-            temp2 = cv2.line(temp2, (0, 0), (100,100), 1, thickness=line_thickness)
-            
-            rows, cols = temp2.shape
-            M = cv2.getRotationMatrix2D((cols/2, rows/2), angle, 1)
-            temp2 = cv2.warpAffine(temp2,M,(cols, rows))
-            
-            temp3 = np.zeros((100,100),dtype=np.float32)
-            temp3 = cv2.circle(temp3, (50, 50), 50, (1), cv2.FILLED)
-            temp2 = temp2 * temp3
-            
-            val = (focus*temp*temp2).mean()
+            val = (focus * mask * template[angle,:,:]).mean()
             result[angle] = np.sqrt(val)
        
         min_a = np.argmin(result)
@@ -69,11 +81,14 @@ def the_function(source):
         #cv2.imshow('', img_disp)
         #cv2.waitKey(0)
         cv2.imwrite(source[:-3]+'JPG', img_disp*128)
-    
-    
-files = glob.glob('/home/ins/line_image/*.jpg')    
+
+print('generate template')
+generate_template()
+print('detecting')
+
+files = glob.glob('/home/ins/line_image/*.jpg')
+t0=time.time()
 for fn in files:
     print(fn)
     the_function(fn)
-    
-    
+print(time.time()-t0)
