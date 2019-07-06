@@ -82,12 +82,11 @@ def estimate_angle(source):
         cv2.imwrite(source[:-4] + '.JPG', img_disp*128)
     return peak_rot-45
 
-
-init()
-files = glob.glob('/home/ins/line_image/*.jpg')
-t0=time.time()
-for fn in files:
-    print(fn)
-    estimate_angle(fn)
-    
-print(time.time()-t0)
+if '__name__'=='__main__':
+    init()
+    files = glob.glob('*.bmp')
+    t0=time.time()
+    for fn in files:
+        print(fn)
+        estimate_angle(fn)    
+    print(time.time()-t0)
