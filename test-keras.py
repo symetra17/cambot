@@ -17,10 +17,14 @@ from keras.optimizers import SGD
 import time
 
 model = Sequential()
+template = None
 
 def init():
+
+    global template
+
     fter_size = 100
-    line_thickness = 25
+    line_thickness = 23
     angle_max = 92
     template = np.zeros((fter_size,fter_size,1,angle_max), dtype=np.float32)
     
@@ -82,15 +86,21 @@ def detect(inp_file):
     est_pos = np.argmax(diff)
     print('detected pos ', est_pos)
     
-    print('est angle ', np.argmin(result[est_pos][:]) -45 )
+    est_angle = np.argmin(result[est_pos][:])
+    
+    print('est angle ',  est_angle-45 )
     print(int(1000*(time.time()-t0)),'ms')
 
-    img = cv2.imread(inp_file)
-    img[est_pos+50, 360-50:360+50] = 255
-    img[est_pos:est_pos+100, 360] = 255
+    img = cv2.imread(inp_file, cv2.IMREAD_GRAYSCALE).astype(np.float32)
+    img = img/512
+    #img[est_pos+50, 360-50:360+50] = 255
+    #img[est_pos:est_pos+100, 360] = 255
+    
+    img[est_pos:est_pos+100, 360-50:360+50] += template[:,:,0,est_angle]
+    
     out_file = inp_file[:-3] + 'JPG'
     
-    cv2.imwrite(out_file, img)
+    cv2.imwrite(out_file, img*256)
     
 if __name__=='__main__':
     init()
