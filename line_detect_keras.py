@@ -65,16 +65,22 @@ def init():
     print(int(time.time()-t0),'sec')
 
 def detect(inp_file):
-    t0=time.time()
-    x_test = cv2.imread(inp_file, 2)[:, 360-50:360+50]
-    x_test = x_test.astype(np.float32)/256
+
+    t0 = time.time()
+    
+    if type(inp_file)==str:
+        x_test = cv2.imread(inp_file, 2)[:, 360-50:360+50]
+        x_test = x_test.astype(np.float32)/256
+    elif type(inp_file)==np.ndarray:
+        x_test = inp_file
+    else:
+        print('unsupported data type')
+
     x_test = x_test.reshape((1,720,100,1))
-    
-    res = model.predict(x_test)   # output shape (1, 621, 1, 92)
-    
+
+    res = model.predict(x_test)   # output shape (1, 621, 1, 92)    
     result = res.reshape((res.shape[1], res.shape[3]))
-    result = np.sqrt(result)    # shape (621,92)
-    
+    result = np.sqrt(result)    # shape (621,92)    
     diff = np.amax(result, axis=1) - np.amin(result, axis=1)
     print(diff.max())
     if diff.max() < diff_thd:
@@ -86,15 +92,18 @@ def detect(inp_file):
     print('pos', est_pos, ' angle',  est_angle-45)
     print(int(1000*(time.time()-t0)),'ms')
 
-    img = cv2.imread(inp_file, cv2.IMREAD_GRAYSCALE).astype(np.float32)
-    img = img/512    
-    img[est_pos:est_pos+100, 360-50:360+50] += template[:,:,0,est_angle]
+    if type(inp_file)==str:
+        img = cv2.imread(inp_file, cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        img = img/512    
+        img[est_pos:est_pos+100, 360-50:360+50] += template[:,:,0,est_angle]
+        out_file = inp_file[:-3] + 'JPG'    
+        cv2.imwrite(out_file, img*256)
 
-    out_file = inp_file[:-3] + 'JPG'    
-    cv2.imwrite(out_file, img*256)
     return [(est_pos, est_angle)]
 
 if __name__=='__main__':
     init()
+    #img = np.zeros((720,100))
+    #detect(img)
     for fn in glob.glob('samples/*.bmp'):
         detect(fn)
