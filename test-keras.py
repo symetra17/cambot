@@ -18,6 +18,7 @@ import time
 
 model = Sequential()
 template = None
+diff_thd = 7.0    # the lower this value, the more sensitive
 
 def init():
 
@@ -31,7 +32,6 @@ def init():
     mask = np.zeros((fter_size,fter_size), dtype=np.float32)
     mask = cv2.circle(mask, (int(fter_size/2), int(fter_size/2)), \
         int(fter_size/2), (1), cv2.FILLED)
-    diff_thd = 7.0    # the lower this value, the more sensitive
 
     for angle in range(angle_max):
         
@@ -61,7 +61,7 @@ def init():
     
     biases = np.zeros((angle_max))
     model.layers[0].set_weights([template, biases])
-    
+    #model.save('mynet')
     print(int(time.time()-t0),'sec')
 
 def detect(inp_file):
@@ -74,35 +74,27 @@ def detect(inp_file):
     
     result = res.reshape((res.shape[1], res.shape[3]))
     result = np.sqrt(result)    # shape (621,92)
-    #print(result)
-    #print('result shape ', result.shape)
-    
-    #print('max heat ', np.amax(result, axis=1))
-    #print('min heat ', np.amin(result, axis=1))
     
     diff = np.amax(result, axis=1) - np.amin(result, axis=1)
-    
-    #print('max diff ', diff.max())
+    print(diff.max())
+    if diff.max() < diff_thd:
+        return []
+
     est_pos = np.argmax(diff)
-    print('detected pos ', est_pos)
-    
     est_angle = np.argmin(result[est_pos][:])
     
-    print('est angle ',  est_angle-45 )
+    print('pos', est_pos, ' angle',  est_angle-45)
     print(int(1000*(time.time()-t0)),'ms')
 
     img = cv2.imread(inp_file, cv2.IMREAD_GRAYSCALE).astype(np.float32)
-    img = img/512
-    #img[est_pos+50, 360-50:360+50] = 255
-    #img[est_pos:est_pos+100, 360] = 255
-    
+    img = img/512    
     img[est_pos:est_pos+100, 360-50:360+50] += template[:,:,0,est_angle]
-    
-    out_file = inp_file[:-3] + 'JPG'
-    
+
+    out_file = inp_file[:-3] + 'JPG'    
     cv2.imwrite(out_file, img*256)
-    
+    return [(est_pos, est_angle)]
+
 if __name__=='__main__':
     init()
-    for fn in glob.glob('*.bmp'):
+    for fn in glob.glob('samples/*.bmp'):
         detect(fn)
