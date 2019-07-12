@@ -26,7 +26,7 @@ if __name__== '__main__':
       if kee==ord('q'):
           quit()
       elif kee==ord(' '):
-          print 'write %d'%n
+          print('write %d'%n)
           cv2.imwrite('im_%04d.bmp'%n, im)
           n=n+1
       time.sleep(0.5)
