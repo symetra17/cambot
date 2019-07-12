@@ -191,11 +191,10 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
         h = int(loc[3])
         if label == b'bottle':
             y_nearest = y + int(h/2)
-            print('y_nearest',y_nearest)
             binary_output = True
             cv2.rectangle(image, 
                     (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), 
-                    color=(1, 0.1, 1))
+                    color=(1, 1, 0), thickness=2)
 
     cv2.imshow("", image)
 
