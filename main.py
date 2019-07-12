@@ -1,3 +1,5 @@
+# This is a python3 code
+
 import numpy as np
 import cv2
 import time
@@ -11,6 +13,9 @@ import random
 import pprint
 import time
 import glob
+#import line_detect_keras
+
+#line_detect_keras.init()
 
 base_dir = '/home/nvidia/my_yolo/'
 
@@ -116,7 +121,7 @@ predict_image.argtypes = [c_void_p, IMAGE]
 predict_image.restype = POINTER(c_float)
 
 p0 = glob.glob(base_dir + 'testimg/yellow/*.jpg')[0]
-im_yolo = load_image(p0, 0, 0)
+im_yolo = load_image(p0.encode('utf-8') , 0, 0)
 
 def classify(net, meta, im):
     out = predict_image(net, im)
@@ -136,8 +141,8 @@ def yolo_image2npy(im_yo):
 
 def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
 
-    t0=time.time()
-    
+    t0 = time.time()
+
     xxx = np.transpose(image, (2,0,1))
     xxx = xxx.flatten()
     numpy_ptr =  xxx.ctypes.data_as(POINTER(c_float))
@@ -166,25 +171,27 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     #im_yolo.data = POINTER(c_float)()
     
     free_detections(dets, num)
-    print "detect ", int(1000.0*(time.time()-t0)), 'ms'
+    print("detect ", int(1000.0*(time.time()-t0)), 'ms')
     
     binary_output = False
     x = 0
     y_nearest = 0
     
-    print "number of item: ", len(res)
+    print("num of item: ", len(res))
     
     if len(res) > 0:
-        label = res[0][0]
-        confi = res[0][1]
-        print label, '  confi %.2f'%confi
-        loc   = res[0][2]
+      for item in res:
+        label = item[0]
+        confi = item[1]
+        print(label, '  confi %.2f'%confi)
+        loc   = item[2]
         x = int(loc[0])
         y = int(loc[1])
         w = int(loc[2])
         h = int(loc[3])
-        if label == 'bottle':
+        if label == b'bottle':
             y_nearest = y + int(h/2)
+            print('y_nearest',y_nearest)
             binary_output = True
             cv2.rectangle(image, 
                     (x-int(w/2), y-int(h/2)), (x+int(w/2), y+int(h/2)), 
@@ -193,36 +200,68 @@ def detect(net, meta, image, thresh=.4, hier_thresh=.5, nms=.45):
     cv2.imshow("", image)
 
     return binary_output, x, y_nearest
+
+def motor_op(r,x,y):
+    post_step = 300
+    
+    if r and y > 500:
+        if 0 < x <= 200:
+            print('small cw')
+            motor.turn(40)
+            motor.forward(200)
+            motor.turn(-40)
+            motor.forward(post_step)
+        
+        elif 200 < x <= 400:
+            print('cw')
+            motor.turn(45)
+            motor.forward(350)
+            motor.turn(-45)
+            motor.forward(post_step)
+            
+        elif 400 < x <= 600:
+            print('ccw')
+            motor.turn(45)
+            motor.forward(350)
+            motor.turn(-45)
+            motor.forward(post_step)
+        else:    # >600
+            print('small ccw')
+            motor.turn(-40)
+            motor.forward(200)
+            motor.turn(40)
+            motor.forward(post_step)
+            
+    elif r and y > 200:
+        print("small forward")
+        motor.forward(200)
+    else:
+        print("forward")
+        motor.forward(300)
     
 if __name__ == "__main__":
 
-
-    motor.reset_device()
-
-
     cam = my_cam.cam_init()
-    exceed = (1280-720)/2
+    exceed = int((1280-720)/2)
 
-    motor.forward(20)
+    #motor.reset_device()
+    #motor.forward(20)
     
     net = None
-    net = load_net(base_dir + "my_yolov3-tiny.cfg", 
-                   base_dir + "weights/my_yolov3-tiny_10000.weights", 0)
-    meta = load_meta(base_dir + "darknet.data")
-
-    #im = cv2.imread(glob.glob(base_dir + 'testimg/yellow/*.jpg')[0])
-    #im = im.astype(np.float32)/256.0
+    net = load_net((base_dir + "my_yolov3-tiny.cfg").encode('utf-8'), 
+                   (base_dir + "weights/my_yolov3-tiny_10000.weights").encode('utf-8'), 0)
+    meta = load_meta((base_dir + "darknet.data").encode('utf-8'))
 
     for n in range(1000):
         for h in range(6):
             ret, img = cam.read()
         ret, img = cam.read()
-        img = img[:, 0+exceed:720+exceed]        
+        img = img[:, 0+exceed:720+exceed]
         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
         img = cv2.resize(img, (800,800))
         img = img.astype(np.float32)/256.0
         r, x, y = detect(net, meta, img)
-        print 'x ', x, '   y ', y
+        print('x ', x, '   y ', y)
         
         
         key = cv2.waitKey(100)
@@ -231,31 +270,7 @@ if __name__ == "__main__":
             
         # y is 220 for 400mm from robot tip
         
-        if r and y > 500:
-            if 300 < x < 500:
-                print 'middle-cw'
-                motor.turn(45)
-                motor.forward(400)
-                motor.turn(-45)
-                motor.forward(200)
-            elif x < 400:
-                print 'cw'
-                motor.turn(40)
-                motor.forward(200)
-                motor.turn(-40)
-                motor.forward(300)
-            else:    # >500
-                print 'ccw'
-                motor.turn(-40)
-                motor.forward(200)
-                motor.turn(40)
-                motor.forward(300)
-        elif r and y > 200:
-            print "small forward"
-            motor.forward(200)
-        else:
-            print "forward"
-            motor.forward(300)
+        #motor_op(r,x,y)
         
         time.sleep(1)
         
