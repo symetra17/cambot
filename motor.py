@@ -1,6 +1,8 @@
 import RPi.GPIO as GPIO
 import time
 
+GPIO.setwarnings(False)
+
 cs   = 27    # board 13 pin
 clk  = 18    # board 12 pin
 mosi = 23    # board 16 pin
